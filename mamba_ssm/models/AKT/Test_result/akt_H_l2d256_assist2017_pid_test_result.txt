@@ -1,0 +1,6 @@
+fold1 test auc:  0.6970944035960257
+fold2 test auc:  0.6915215135686291
+fold3 test auc:  0.6860887960274323
+fold4 test auc:  0.6873590259445357
+fold5 test auc:  0.6913888602891486
+average test auc: 0.6907 ± 0.0039
