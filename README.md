@@ -1,15 +1,11 @@
-# Ma
+# DGMKT
 
-![Mamba](assets/selection.png "Selective State Space")
-> **Mamba: Linear-Time Sequence Modeling with Selective State Spaces**\
-> Albert Gu*, Tri Dao*\
+![DGMKT](assets/selection.png "Selective State Space")
+> **Leveraging Student Profiles and the Mamba Framework to Enhance Knowledge Tracing**\
+> **mingxing Shao*,** tiancheng Zhang*\
 > Paper: https://arxiv.org/abs/2312.00752
 
-![Mamba-2](assets/ssd_algorithm.png "State Space Dual Model")
-> **Transformers are SSMs: Generalized Models and Efficient Algorithms**\
->     **Through Structured State Space Duality**\
-> Tri Dao*, Albert Gu*\
-> Paper: https://arxiv.org/abs/2405.21060
+
 
 ## About
 
