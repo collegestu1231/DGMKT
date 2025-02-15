@@ -17,7 +17,7 @@ from mamba_ssm.modules.mamba2 import Mamba2
 from mamba_ssm.modules.mha import MHA
 from mamba_ssm.modules.mlp import GatedMLP
 from mamba_ssm.modules.block import Block
-from mamba_ssm.utils.generation import GenerationMixin  # 提供常用的生成函数
+from mamba_ssm.utils.generation import GenerationMixin  
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 from hgnn_models import HGNN
 
@@ -41,7 +41,7 @@ def create_block(
         layer_idx=None,
         device=None,
         dtype=None,
-):  # 创建一个Mamba Block,根据配置参数选择不同的归一化层(LayerNorm或RMSNorm)
+):  
     if ssm_cfg is None:
         ssm_cfg = {}
     if attn_layer_idx is None:
@@ -120,24 +120,19 @@ def _init_weights(
 
 
 class MixerModel(nn.Module):
-    """
-    构建Mamba模型的主题类,包含模型的嵌入层,多个处理块,以及一个输出层的规范化。
-    通过ModuleLIst管理模型中所有的块,确保它们被有效地迭代处理。
-    在前向传播方法中,输入序列首先通过嵌入层,然后一次通过每个块处理,最后应用规范化层
 
-    """
 
     def __init__(
             self,
-            d_model: int,  # 模型维度
-            n_layer: int,  # Mamba Block的数目
-            d_intermediate: int,  # 时间步
-            num_c: int,  # 词汇表维度
-            ssm_cfg=None,  # 配置参数
+            d_model: int,  
+            n_layer: int, 
+            d_intermediate: int,  
+            num_c: int,  
+            ssm_cfg=None,  
             attn_layer_idx=None,
             attn_cfg=None,
-            norm_epsilon: float = 1e-5,  # 配置参数
-            rms_norm: bool = False,  # 配置参数,True
+            norm_epsilon: float = 1e-5,  
+            rms_norm: bool = False,  
             initializer_cfg=None,
             fused_add_norm=False,  # True
             residual_in_fp32=False,  # True
@@ -148,7 +143,7 @@ class MixerModel(nn.Module):
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
 
-        self.embedding = nn.Embedding(num_c, d_model, **factory_kwargs)  # 词嵌入层,将离散的Token转化为连续的向量
+        self.embedding = nn.Embedding(num_c, d_model, **factory_kwargs)  
 
         # We change the order of residual and layer norm:
         # Instead of LN -> Attn / MLP -> Add, we do:
@@ -177,11 +172,11 @@ class MixerModel(nn.Module):
                 )
                 for i in range(n_layer)
             ]
-        )  # 构建n_layer个Mamba Block，每个Block包括残差连接，LayerNorm,和Mamba层
+        )  
 
         self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
             d_model, eps=norm_epsilon, **factory_kwargs
-        )  # 构建了最后一个LayerNorm层(self.norm_f),用于归一模型的最终输出
+        )  
 
         self.apply(
             partial(
@@ -190,7 +185,7 @@ class MixerModel(nn.Module):
                 **(initializer_cfg if initializer_cfg is not None else {}),
                 n_residuals_per_layer=1 if d_intermediate == 0 else 2,  # 2 if we have MLP
             )
-        )  # 应用一个初始化函数_init_weights,根据层数n_layer调整某些参数的初始值
+        ) 
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
@@ -199,8 +194,7 @@ class MixerModel(nn.Module):
         }
 
     def forward(self, hidden_states, inference_params=None, **mixer_kwargs):
-        # 定义前向传播流程,词嵌入->n个Block->最后的LayerNorm
-        # input_ids.shape torch.Size([batch_size,seq_len])每个ID都是整数
+
 
         residual = None
         for layer in self.layers:
@@ -334,12 +328,12 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         gate = torch.sigmoid(self.gate_fc(torch.cat([stu_h, x], dim=-1)))
 
         kt_input = gate * stu_h + (1 - gate) * x
-        x = self.backbone(kt_input, inference_params=inference_params, **mixer_kwargs)  # 得到隐藏状态了捏
+        x = self.backbone(kt_input, inference_params=inference_params, **mixer_kwargs)  
 
         logits = self.kt_head(x)
         logits = self.sig(logits)
         logits = logits[:, :-1, :]
-        return self._get_next_pred(logits, skill), skill_answer_embedding  # 这里加一个skill_answer_embedding
+        return self._get_next_pred(logits, skill), skill_answer_embedding  
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
