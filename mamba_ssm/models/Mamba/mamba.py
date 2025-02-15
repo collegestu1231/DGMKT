@@ -17,7 +17,7 @@ from mamba_ssm.modules.mamba2 import Mamba2
 from mamba_ssm.modules.mha import MHA
 from mamba_ssm.modules.mlp import GatedMLP
 from mamba_ssm.modules.block import Block
-from mamba_ssm.utils.generation import GenerationMixin  # 提供常用的生成函数
+from mamba_ssm.utils.generation import GenerationMixin 
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 
 try:
@@ -119,15 +119,15 @@ class MixerModel(nn.Module):
 
     def __init__(
         self,
-        d_model: int,  # 模型维度
-        n_layer: int,  # Mamba Block的数目
+        d_model: int,  
+        n_layer: int, 
         d_intermediate: int,
-        num_c: int,  # 问题个数
-        ssm_cfg=None,  # 配置参数
+        num_c: int,  
+        ssm_cfg=None,  
         attn_layer_idx=None,
         attn_cfg=None,
-        norm_epsilon: float = 1e-5,  # 配置参数
-        rms_norm: bool = False,  # 配置参数,True
+        norm_epsilon: float = 1e-5,  
+        rms_norm: bool = False,  
         initializer_cfg=None,
         fused_add_norm=False,  # True
         residual_in_fp32=False,  # True
@@ -138,7 +138,7 @@ class MixerModel(nn.Module):
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
 
-        self.embedding = nn.Embedding(num_c, d_model, **factory_kwargs)  # 词嵌入层,将离散的Token转化为连续的向量
+        self.embedding = nn.Embedding(num_c, d_model, **factory_kwargs)  
 
         # We change the order of residual and layer norm:
         # Instead of LN -> Attn / MLP -> Add, we do:
