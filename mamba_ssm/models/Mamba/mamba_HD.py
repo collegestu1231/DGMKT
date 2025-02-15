@@ -179,11 +179,11 @@ class MixerModel(nn.Module):
                 )
                 for i in range(n_layer)
             ]
-        )
+        )  # 构建n_layer个Mamba Block，每个Block包括残差连接，LayerNorm,和Mamba层
 
         self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
             d_model, eps=norm_epsilon, **factory_kwargs
-        )
+        )  # 构建了最后一个LayerNorm层(self.norm_f),用于归一模型的最终输出
 
         self.apply(
             partial(
@@ -192,7 +192,7 @@ class MixerModel(nn.Module):
                 **(initializer_cfg if initializer_cfg is not None else {}),
                 n_residuals_per_layer=1 if d_intermediate == 0 else 2,  # 2 if we have MLP
             )
-        )
+        )  # 应用一个初始化函数_init_weights,根据层数n_layer调整某些参数的初始值
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
@@ -347,7 +347,10 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         return self.backbone.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
 
     def forward(self, student, skill, answer, cur=None, clo=None, far=None):
-
+        """
+        "position_ids" is just to be compatible with Transformer generation. We don't use it.
+        num_last_tokens: if > 0, only return the logits for the last n tokens
+        """
         # student b,l
 
         # H Graph
@@ -366,32 +369,171 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         # print(mask_stu_h[0,0,:])
         # print(mask_stu_h[0,-1,:])
         # print(mask_stu_h[:, 0, :].shape)
+        """
+        if cur is not None:
+            i=0
+            mask_stu_h = stu_h * mask
+            vis_stu_h = mask_stu_h[:, 0, :]  # Taking the first student ID row from each batch [b, d]
+            vis_stu_h = vis_stu_h.detach().cpu().numpy()
 
+            # Use UMAP to reduce dimensionality to 2D
+            reducer = UMAP(n_components=2, random_state=0)
+            vis_stu_h_umap = reducer.fit_transform(
+                vis_stu_h)  # Each point's coordinates in 2D space, shape = (b, 2)
+
+            # Visualize the results, showing all points and the specified three points
+            plt.figure(figsize=(10, 6))  # Set canvas size
+
+            # Plot the base point (solid circle)
+
+            far_label = False
+            close_label = False
+            drawn_points = set()
+
+            # Plot the farthest points (X marker), avoiding overlaps with closest points
+            for idx in far:
+                coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
+                if coord not in drawn_points:
+                    if not far_label:
+                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black',
+                                    s=100,
+                                    linewidths=2,
+                                    label='Farth Points')
+                        i=i+1
+                        far_label = True
+                    else:
+                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black',
+                                    s=100,
+                                    linewidths=2)
+                        i = i + 1
+                    drawn_points.add(coord)
+
+            # Plot the closest points (hollow circles), avoiding overlaps
+            for idx in clo:
+                coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
+                if coord not in drawn_points:
+                    if not close_label:
+                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596', edgecolors='black',
+                                    linewidths=2, s=100, label='Close Points')
+                        close_label = True
+                        i = i + 1
+                    else:
+                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596', edgecolors='black',
+                                    linewidths=2, s=100)
+                        i = i + 1
+                    drawn_points.add(coord)
+            plt.scatter(vis_stu_h_umap[0, 0], vis_stu_h_umap[0, 1], c='r', alpha=0.9, edgecolors='w',
+                        linewidths=0.5,
+                        s=100, label='Base Point')
+            print(i+1)
+            # plt.tick_params(axis='both', labelsize=16)
+            # 禁用坐标轴刻度
+            plt.tick_params(axis='both', which='both', left=False, right=False, bottom=False, top=False,
+                            labelleft=False, labelbottom=False)
+
+            # 其余代码保持不变
+
+            # Add legend, titles, and labels
+            plt.legend(fontsize=16)  # Increase font size of the legend
+            plt.title("", fontsize=16, weight='bold')
+            plt.xlabel("", fontsize=18)
+            plt.ylabel("", fontsize=18)
+            plt.gca().spines['bottom'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
+            plt.gca().spines['left'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
+            plt.gca().spines['top'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
+            plt.gca().spines['right'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
+            plt.grid(True, linestyle='--', alpha=0.5, linewidth=2)
+
+            plt.show()
+
+        """
         # D Graph
         all_edge_indices = self._generate_edge_index(skill)  # 0~660
         all_stu_h = []
-        for b in range(skill.shape[0]):
-
+        for b in range(skill.shape[0]): # 对于每个学生进行图卷积
+            # 将学生嵌入 stu_h 作为输入进行图卷积
             data = Data(x=self.skill_embedding.weight, edge_index=all_edge_indices[b].to(device))
             b_stu_h = self.gcn_conv1(data.x, data.edge_index)
             b_stu_h = F.relu(b_stu_h)
             b_stu_h = self.gcn_conv2(b_stu_h, data.edge_index)
-            all_stu_h.append(b_stu_h.unsqueeze(0))
+            all_stu_h.append(b_stu_h.unsqueeze(0))  # 保持 batch 维度
+        # 拼接所有学生的嵌入
         all_stu_h = torch.cat(all_stu_h, dim=0)  # [b, num_c+1, emb_size]
         skill_index = skill.unsqueeze(-1)  # [b,l,1]
         all_stu_h = torch.gather(all_stu_h, 1, skill_index.expand(-1, -1, self.d_model))  # (b,l,d)
+
+        # 掩码计算
+
         all_stu_h = all_stu_h * mask
-        effective_lengths = mask.sum(dim=1).squeeze(-1).long()  # [b]
+        # 计算有效长度
+        effective_lengths = mask.sum(dim=1).squeeze(-1).long()  # [b] 每个样本的有效长度
+        # 根据有效长度选择 self.pos 的对应切片
         expand_pos = torch.stack([self.pos[length - 1] for length in effective_lengths], dim=0)  # [b, 500, 1]
-
+        # 应用 softmax 并使用掩码过滤
         expand_pos = F.softmax(expand_pos * mask, dim=1)
-        all_stu_h = torch.sum(all_stu_h * expand_pos, dim=1)  #
-
+        all_stu_h = torch.sum(all_stu_h * expand_pos, dim=1)  # 在 dim=1 上求加权和，得到 [b, d]
+        # 恢复原始形状
         all_stu_h = all_stu_h.unsqueeze(1).expand(-1, skill.shape[1], -1)
         # print(all_stu_h.shape)
+        # 模型可视化部分
 
 
-
+        # if cur is not None:
+        #     mask_stu_h = all_stu_h * mask
+        #     vis_stu_h = mask_stu_h[:, 0, :]  # Taking the first student ID row from each batch [b, d]
+        #     vis_stu_h = vis_stu_h.detach().cpu().numpy()
+        #
+        #     # Use UMAP to reduce dimensionality to 2D
+        #     reducer = UMAP(n_components=2, random_state=0)
+        #     vis_stu_h_umap = reducer.fit_transform(vis_stu_h)  # Each point's coordinates in 2D space, shape = (b, 2)
+        #
+        #     # Visualize the results, showing all points and the specified three points
+        #     plt.figure(figsize=(10, 6))  # Set canvas size
+        #
+        #     # Plot the base point (solid circle)
+        #
+        #     far_label = False
+        #     close_label = False
+        #     drawn_points = set()
+        #
+        #     # Plot the farthest points (X marker), avoiding overlaps with closest points
+        #     for idx in far:
+        #         coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
+        #         if coord not in drawn_points:
+        #             if not far_label:
+        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black', s=100,
+        #                             linewidths=2,
+        #                             label='Farth Points')
+        #                 far_label = True
+        #             else:
+        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black', s=100,
+        #                             linewidths=2)
+        #             drawn_points.add(coord)
+        #
+        #     # Plot the closest points (hollow circles), avoiding overlaps
+        #     for idx in clo:
+        #         coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
+        #         if coord not in drawn_points:
+        #             if not close_label:
+        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596',edgecolors='black',
+        #                             linewidths=2, s=100, label='Close Points')
+        #                 close_label = True
+        #             else:
+        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596',edgecolors='black',
+        #                             linewidths=2, s=100)
+        #             drawn_points.add(coord)
+        #     plt.scatter(vis_stu_h_umap[0, 0], vis_stu_h_umap[0, 1], c='r', alpha=0.9, edgecolors='w', linewidths=0.5,
+        #                 s=100, label='Base Point')
+        #     # plt.tick_params(axis='both', labelsize=16)
+        #     plt.tick_params(axis='both', which='both', left=False, right=False, bottom=False, top=False,
+        #                     labelleft=False, labelbottom=False)
+        #     # Add legend, titles, and labels
+        #     plt.legend(fontsize=16)  # Increase font size of the legend
+        #     plt.title("", fontsize=16, weight='bold')
+        #     plt.xlabel("", fontsize=18)
+        #     plt.ylabel("", fontsize=18)
+        #     plt.grid(True, linestyle='--', alpha=0.5,linewidth=2)
+        #     plt.show()
 
         # Basic embedding
         skill_embedding = self.skill_embedding(skill)
@@ -403,8 +545,8 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         skill_answer_embedding = torch.where(answer == 1, skill_answer, answer_skill)
         x = skill_answer_embedding
 
-        x_DG = self.change_dim_D(torch.cat((all_stu_h, x), dim=-1))
-        x_HG = self.change_dim_H(torch.cat((stu_h, x), dim=-1))
+        x_DG = self.change_dim_D(torch.cat((all_stu_h, x), dim=-1))  # 学生做题的顺序,拼接学生嵌入以及问题嵌入
+        x_HG = self.change_dim_H(torch.cat((stu_h, x), dim=-1))  # 学生做了哪些题目
 
         h_DG = self.backbone_D(x_DG)
         h_HG = self.backbone_H(x_HG)
@@ -416,7 +558,24 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         h_HG = theta * h_HG
         h_DG = (1 - theta) * h_DG
         emseble_logit = self.fc_ensemble(torch.cat([h_HG, h_DG], -1))
+        # 应该检测一下,y在各个时间步的值
+        # print(skill[0,:])
+        concepts = []
+        # step,concepts = find_unique_steps(skill[0,:])
+        #print(step)
+        # print(concepts)
+        # print(skill[0,:step+1])
+        # print(temp_answer[0,:step+1])
+        #print(self.sigmoid(logit_h[0,0,:5]))
+        #print(self.sigmoid(logit_h[0, effective_lengths[0]-1, :5]))
+        #print(effective_lengths[0]-1)
+        #plot_radar_chart(self.sigmoid(logit_h[0,0:,concepts]),self.sigmoid(logit_h[0, step, concepts]))
 
+        # print(self.sigmoid(logit_h[0,0,:5]))
+        # print(self.sigmoid(logit_h[0, -1, :5]))
+        # plot_mastery_heatmap(self.sigmoid(logit_h[0,0:step+1,concepts]),concepts)
+        # print((self.sigmoid(logit_h[0,0:step+1,concepts])+self.sigmoid(logit_d[0,0:step+1,concepts])+self.sigmoid(emseble_logit[0,0:step+1,concepts]))/3.0)
+        #plot_radar_chart(torch.tensor([0.2,0.2,0.2,0.2,0.2]), self.sigmoid(logit_h[0, step, concepts]),concepts,step+1)
         logit_h, logit_d, emseble_logit = logit_h[:, :-1, :], logit_d[:, :-1, :], emseble_logit[:, :-1, :]
         return self._get_next_pred(logit_h, skill), self._get_next_pred(logit_d, skill), self._get_next_pred(
             emseble_logit, skill)

@@ -117,6 +117,59 @@ def _init_weights(
                     p /= math.sqrt(n_residuals_per_layer * n_layer)
 
 
+"""
+class TransformerBlock(nn.Module):
+    def __init__(self, d_model,num_heads,dropout):
+        
+        super().__init__()
+
+        # below is BinMamba
+        self.bin_self_attn = nn.MultiheadAttention(embed_dim=d_model * 2, num_heads=2,
+                                                   dropout=0.2)
+        self.bin_ffn = nn.Sequential(
+            nn.Linear(d_model * 2, d_model * 2),
+            nn.ReLU(),
+            nn.Linear(d_model * 2, d_model * 2),
+            nn.Dropout(0.2)
+        )
+        self.bin_norm1 = nn.LayerNorm(d_model * 2)
+        self.bin_norm2 = nn.LayerNorm(d_model * 2)
+
+        # below is Mamba
+        self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads,
+                                               dropout=dropout)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Linear(d_model, d_model),
+            nn.Dropout(0.2)
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+
+    def forward(self, x, mask=None):
+
+        b, seq_len, _ = x.shape
+        mask = future_mask(seq_len)
+
+        if False:
+            attn_output, _ = self.bin_self_attn(x.permute(1, 0, 2), x.permute(1, 0, 2), x.permute(1, 0, 2), attn_mask=mask)
+            attn_output = attn_output.permute(1, 0, 2)
+
+            x = self.bin_norm1(x + attn_output)
+            ffn_output = self.bin_ffn(x)
+            x = self.bin_norm2(x + ffn_output)
+            return x
+        else:
+            attn_output, _ = self.self_attn(x.permute(1, 0, 2), x.permute(1, 0, 2), x.permute(1, 0, 2), attn_mask=mask)
+            attn_output = attn_output.permute(1, 0, 2)
+            x = self.norm1(x + attn_output)
+            ffn_output = self.ffn(x)
+            x = self.norm2(x + ffn_output)
+            return x
+def future_mask(seq_len):
+    return torch.triu(torch.ones(seq_len, seq_len), diagonal=1).bool().to(device)
+"""
 
 
 class MixerModel(nn.Module):
@@ -226,11 +279,16 @@ class MixerModel(nn.Module):
 
 
 class MambaKTHeadModel(nn.Module, GenerationMixin):
+    """
+    继承了MixerModel,添加了用于NLP任务的线性输出层,使得模型能够根据隐藏状态输出单词的概率分布
+    提供从预训练模型加载参数的方法(from_pretrained),以及保存模型到文件的方法(save_pretrained)
+    集成了GenerationMixin,这是一个混入类,提供了文本生成相关的方法和功能
+    """
 
     def __init__(
             self,
-            config: MambaConfig,
-            G=None,
+            config: MambaConfig,  # 模型各种配置参数
+            G=None,   # 学生关于问题的关系矩阵
             initializer_cfg=None,
             device=None,
             dtype=None,
@@ -261,7 +319,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         
         # H Graph
         self.G = G
-        emb = nn.Embedding(G.shape[0], d_model)
+        emb = nn.Embedding(G.shape[0], d_model)  # 学生数目=4151
         self.stu = emb(torch.LongTensor([i for i in range(G.shape[0])])).cuda()
         self.net = HGNN(in_ch=d_model,
                         n_hid=d_model,
@@ -285,7 +343,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         # self.TransformerBlock = TransformerBlock(d_model,2,0.2)
         # output Layer
         self.gate_fc = nn.Linear(2 * d_model, 1)
-        self.kt_head = nn.Linear(d_model, num_c, bias=False, **factory_kwargs)
+        self.kt_head = nn.Linear(d_model, num_c, bias=False, **factory_kwargs)  # 构建语言模型输出头,一个线性层,
 
         # Initialize weights and apply final processing
         self.apply(
@@ -312,10 +370,13 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
 
     def forward(self, student, skill, answer, difficulty=None, inference_params=None, num_last_tokens=0,
                 **mixer_kwargs):
-
+        """
+        "position_ids" is just to be compatible with Transformer generation. We don't use it.
+        num_last_tokens: if > 0, only return the logits for the last n tokens
+        """
 
         # H Graph
-        student = F.one_hot(student-1, num_classes=self.G.shape[0])
+        student = F.one_hot(student-1, num_classes=self.G.shape[0]) # 24 500 4151
         stu_embedding = self.net(self.stu, self.G)
         stu_h = student.float().matmul(stu_embedding) # [b,l,d]
         
@@ -343,7 +404,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
-
+        #  从预训练的检查点加载模型权重
         config_data = load_config_hf(pretrained_model_name)
         config = MambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)

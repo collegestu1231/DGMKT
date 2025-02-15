@@ -41,7 +41,7 @@ def create_block(
         layer_idx=None,
         device=None,
         dtype=None,
-):
+):  # 创建一个Mamba Block,根据配置参数选择不同的归一化层(LayerNorm或RMSNorm)
     if ssm_cfg is None:
         ssm_cfg = {}
     if attn_layer_idx is None:
@@ -117,8 +117,68 @@ def _init_weights(
                     p /= math.sqrt(n_residuals_per_layer * n_layer)
 
 
+"""
+class TransformerBlock(nn.Module):
+    def __init__(self, d_model,num_heads,dropout):
+
+        super().__init__()
+
+        # below is BinMamba
+        self.bin_self_attn = nn.MultiheadAttention(embed_dim=d_model * 2, num_heads=2,
+                                                   dropout=0.2)
+        self.bin_ffn = nn.Sequential(
+            nn.Linear(d_model * 2, d_model * 2),
+            nn.ReLU(),
+            nn.Linear(d_model * 2, d_model * 2),
+            nn.Dropout(0.2)
+        )
+        self.bin_norm1 = nn.LayerNorm(d_model * 2)
+        self.bin_norm2 = nn.LayerNorm(d_model * 2)
+
+        # below is Mamba
+        self.self_attn = nn.MultiheadAttention(embed_dim=d_model, num_heads=num_heads,
+                                               dropout=dropout)
+        self.ffn = nn.Sequential(
+            nn.Linear(d_model, d_model),
+            nn.ReLU(),
+            nn.Linear(d_model, d_model),
+            nn.Dropout(0.2)
+        )
+        self.norm1 = nn.LayerNorm(d_model)
+        self.norm2 = nn.LayerNorm(d_model)
+
+    def forward(self, x, mask=None):
+
+        b, seq_len, _ = x.shape
+        mask = future_mask(seq_len)
+
+        if False:
+            attn_output, _ = self.bin_self_attn(x.permute(1, 0, 2), x.permute(1, 0, 2), x.permute(1, 0, 2), attn_mask=mask)
+            attn_output = attn_output.permute(1, 0, 2)
+
+            x = self.bin_norm1(x + attn_output)
+            ffn_output = self.bin_ffn(x)
+            x = self.bin_norm2(x + ffn_output)
+            return x
+        else:
+            attn_output, _ = self.self_attn(x.permute(1, 0, 2), x.permute(1, 0, 2), x.permute(1, 0, 2), attn_mask=mask)
+            attn_output = attn_output.permute(1, 0, 2)
+            x = self.norm1(x + attn_output)
+            ffn_output = self.ffn(x)
+            x = self.norm2(x + ffn_output)
+            return x
+def future_mask(seq_len):
+    return torch.triu(torch.ones(seq_len, seq_len), diagonal=1).bool().to(device)
+"""
+
 
 class MixerModel(nn.Module):
+    """
+    构建Mamba模型的主题类,包含模型的嵌入层,多个处理块,以及一个输出层的规范化。
+    通过ModuleLIst管理模型中所有的块,确保它们被有效地迭代处理。
+    在前向传播方法中,输入序列首先通过嵌入层,然后一次通过每个块处理,最后应用规范化层
+
+    """
 
     def __init__(
             self,
@@ -276,7 +336,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         # self.TransformerBlock = TransformerBlock(d_model,2,0.2)
         # output Layer
         self.gate_fc = nn.Linear(2 * d_model, 1)
-        self.kt_head = nn.Linear(d_model, num_c, bias=False, **factory_kwargs)
+        self.kt_head = nn.Linear(d_model, num_c, bias=False, **factory_kwargs)  # 构建语言模型输出头,一个线性层,
 
         # Initialize weights and apply final processing
         self.apply(
@@ -299,7 +359,9 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return self.backbone.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
     def _generate_edge_index(self, skill):
-
+        """
+        根据学生的做题序列 (skill) 生成边索引 (edge_index)，使用题目编号本身作为边索引
+        """
         batch_size, seq_len = skill.size()
         all_edge_indices = []
 
@@ -321,13 +383,13 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         all_edge_indices = self._generate_edge_index(skill)
         all_stu_h = []
         for b in range(skill.shape[0]):
-
+            # 将学生嵌入 stu_h 作为输入进行图卷积
             data = Data(x=self.skill_embedding.weight, edge_index=all_edge_indices[b].to(device))
             b_stu_h = self.gcn_conv1(data.x, data.edge_index)
             b_stu_h = F.relu(b_stu_h)
             b_stu_h = self.gcn_conv2(b_stu_h, data.edge_index)
-            all_stu_h.append(b_stu_h.unsqueeze(0))
-
+            all_stu_h.append(b_stu_h.unsqueeze(0))  # 保持 batch 维度
+        # 拼接所有学生的嵌入
         all_stu_h = torch.cat(all_stu_h, dim=0)  # [b, num_c+1, emb_size]
         skill_index = skill.unsqueeze(-1) # [b,l,1]
         all_stu_h = torch.gather(all_stu_h, 1, skill_index.expand(-1, -1, self.d_model)) # (b,l,d)
@@ -356,7 +418,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
-
+        #  从预训练的检查点加载模型权重
         config_data = load_config_hf(pretrained_model_name)
         config = MambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)
@@ -364,7 +426,10 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         return model
 
     def save_pretrained(self, save_directory):
-
+        """
+        Minimal implementation of save_pretrained for MambaLMHeadModel.
+        Save the model and its configuration file to a directory.
+        """
         # Ensure save_directory exists
         os.makedirs(save_directory, exist_ok=True)
 
