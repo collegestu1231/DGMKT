@@ -39,7 +39,7 @@ def create_block(
     layer_idx=None,
     device=None,
     dtype=None,
-):  # 创建一个Mamba Block,根据配置参数选择不同的归一化层(LayerNorm或RMSNorm)
+):
     if ssm_cfg is None:
         ssm_cfg = {}
     if attn_layer_idx is None:
@@ -58,7 +58,7 @@ def create_block(
             layer_idx=layer_idx,
             **ssm_cfg,
             **factory_kwargs
-        ) # 冻结参数,使得需要传入的参数更少
+        )
     else:
         mixer_cls = partial(MHA, layer_idx=layer_idx, **attn_cfg, **factory_kwargs)
     norm_cls = partial(
@@ -72,7 +72,7 @@ def create_block(
         )
     block = Block(
         d_model,
-        mixer_cls, # 这个mix_cls里有Mamba层
+        mixer_cls,
         mlp_cls,
         norm_cls=norm_cls,
         fused_add_norm=fused_add_norm,
@@ -116,12 +116,7 @@ def _init_weights(
 
 
 class MixerModel(nn.Module):
-    """
-    构建Mamba模型的主题类,包含模型的嵌入层,多个处理块,以及一个输出层的规范化。
-    通过ModuleLIst管理模型中所有的块,确保它们被有效地迭代处理。
-    在前向传播方法中,输入序列首先通过嵌入层,然后一次通过每个块处理,最后应用规范化层
 
-    """
     def __init__(
         self,
         d_model: int,  # 模型维度
@@ -151,7 +146,7 @@ class MixerModel(nn.Module):
         # the main branch (output of MLP / Mixer). The model definition is unchanged.
         # This is for performance reason: we can fuse add + layer_norm.
         self.fused_add_norm = fused_add_norm
-        if self.fused_add_norm: # 融合加法和归一化
+        if self.fused_add_norm:
             if layer_norm_fn is None or rms_norm_fn is None:
                 raise ImportError("Failed to import Triton LayerNorm / RMSNorm kernels")
 
@@ -172,11 +167,11 @@ class MixerModel(nn.Module):
                 )
                 for i in range(n_layer)
             ]
-        )  # 构建n_layer个Mamba Block，每个Block包括残差连接，LayerNorm,和Mamba层
+        )
 
         self.norm_f = (nn.LayerNorm if not rms_norm else RMSNorm)(
             d_model, eps=norm_epsilon, **factory_kwargs
-        )  # 构建了最后一个LayerNorm层(self.norm_f),用于归一模型的最终输出
+        )
 
         self.apply(
             partial(
@@ -185,7 +180,7 @@ class MixerModel(nn.Module):
                 **(initializer_cfg if initializer_cfg is not None else {}),
                 n_residuals_per_layer=1 if d_intermediate == 0 else 2,  # 2 if we have MLP
             )
-        )  # 应用一个初始化函数_init_weights,根据层数n_layer调整某些参数的初始值
+        )
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return {
@@ -194,8 +189,7 @@ class MixerModel(nn.Module):
         }
 
     def forward(self, hidden_states, inference_params=None, **mixer_kwargs):
-        # 定义前向传播流程,词嵌入->n个Block->最后的LayerNorm
-        # input_ids.shape torch.Size([batch_size,seq_len])每个ID都是整数
+
 
         residual = None
         for layer in self.layers:
@@ -221,15 +215,11 @@ class MixerModel(nn.Module):
 
 
 class MambaKTHeadModel(nn.Module, GenerationMixin):
-    """
-    继承了MixerModel,添加了用于NLP任务的线性输出层,使得模型能够根据隐藏状态输出单词的概率分布
-    提供从预训练模型加载参数的方法(from_pretrained),以及保存模型到文件的方法(save_pretrained)
-    集成了GenerationMixin,这是一个混入类,提供了文本生成相关的方法和功能
-    """
+
 
     def __init__(
         self,
-        config: MambaConfig,  # 模型各种配置参数
+        config: MambaConfig,
 
         initializer_cfg=None,
         device=None,
@@ -271,9 +261,9 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
             fused_add_norm=fused_add_norm,  # True
             residual_in_fp32=residual_in_fp32,  # True
             **factory_kwargs,
-        )  # 构建MixerModel作为语言模型的主干网络(backbone)
-        self.lm_head = nn.Linear(d_model*2, num_c, bias=False, **factory_kwargs)  # 构建语言模型输出头,一个线性层,
-        # 将MixerModel的输出转化为每个位置的词表概率分布
+        )
+        self.lm_head = nn.Linear(d_model*2, num_c, bias=False, **factory_kwargs)
+
 
         # Initialize weights and apply final processing
         self.apply(
@@ -314,11 +304,11 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         logits = self.lm_head(x)
         logits = self.sig(logits)
         logits = logits[:, :-1, :]
-        return self._get_next_pred(logits, skill), skill_answer_embedding  # 这里加一个skill_answer_embedding
+        return self._get_next_pred(logits, skill), skill_answer_embedding
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
-        #  从预训练的检查点加载模型权重
+
         config_data = load_config_hf(pretrained_model_name)
         config = MambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)
