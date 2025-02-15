@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 from hgnn_models import HGNN
-from torch.nn import Module, Embedding, RNN, Linear, Dropout,LSTM
+from torch.nn import Module, Embedding, RNN, Linear, Dropout
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from torch_geometric.data import Data
@@ -26,7 +26,7 @@ class DKT(Module):
         self.fc_d = Linear(self.emb_size, self.num_c)
 
         # RNN
-        self.lstm_layer_DG = LSTM(self.emb_size*3, self.hidden_size, batch_first=True)
+        self.rnn_Layer_DG = RNN(self.emb_size*3, self.hidden_size, batch_first=True)
         self.pos = nn.Parameter(torch.rand([500, 500, 1]))
         # output
         self.dropout_layer = Dropout(dropout)
@@ -99,7 +99,7 @@ class DKT(Module):
 
         x_DG = torch.cat((all_stu_h, x), dim=-1) # 学生做题的顺序
 
-        h_DG, _ = self.lstm_layer_DG(x_DG) # layer的层也许可以改一下？
+        h_DG, _ = self.rnn_Layer_DG(x_DG) # layer的层也许可以改一下？
         h_DG = self.dropout_layer(h_DG)
         h_DG = self.out_layer(h_DG)
         logit_d = self.sigmoid(h_DG)

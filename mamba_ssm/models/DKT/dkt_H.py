@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 from hgnn_models import HGNN
-from torch.nn import Module, Embedding, RNN, Linear, Dropout,LSTM
+from torch.nn import Module, Embedding, RNN, Linear, Dropout
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class DKT(Module):
@@ -17,7 +17,7 @@ class DKT(Module):
         self.skill_embedding = Embedding(num_c + 1, self.emb_size)
         self.answer_embedding = Embedding(2 + 1, self.emb_size)
         self.G = G
-        emb = Embedding(G.shape[0], self.emb_size)  # 学生数目=4151
+        emb = Embedding(G.shape[0], self.emb_size)
         self.stu = emb(torch.LongTensor([i for i in range(G.shape[0])])).cuda()
         if emb_type.startswith("qid"):
             self.interaction_emb = Embedding(self.num_c * 2+1, self.emb_size)
@@ -25,7 +25,7 @@ class DKT(Module):
                         n_hid=self.emb_size,
                         n_class=self.emb_size)
         self.change_dim = Linear(self.emb_size * 3, self.emb_size)
-        self.lstm_layer = LSTM(self.emb_size*3, self.hidden_size, batch_first=True)
+        self.rnn_layer = RNN(self.emb_size*3, self.hidden_size, batch_first=True)
         self.dropout_layer = Dropout(dropout)
         self.out_layer = Linear(self.hidden_size, self.num_c)
     def _get_next_pred(self, res, skill):
@@ -39,7 +39,7 @@ class DKT(Module):
     def forward(self,student,skill, answer):
         # print(student)
         student = F.one_hot(student - 1, num_classes=self.G.shape[0])  # 24 500 4151
-        # print('孩子们,这并不好笑')
+
         stu_embedding = self.net(self.stu, self.G)
 
         skill_embedding = self.skill_embedding(skill)
@@ -52,23 +52,11 @@ class DKT(Module):
         x = skill_answer_embedding
         x = torch.cat((stu_h, x), dim=-1)
         # x = self.change_dim(x)
-
-        """
-        stu_h = student.float().matmul(stu_embedding)
-        emb_type = self.emb_type
-        if emb_type == "qid":
-            answer_x = torch.where(answer == 2, torch.tensor([1]).to(device), answer)
-            x = skill + self.num_c * answer_x
-            xemb = self.interaction_emb(x)
-        xemb = torch.cat((xemb,stu_h),dim=-1)
-        # print(f"xemb.shape is {xemb.shape}")(b,l,d)
-        # print('你好',self.lstm_layer)(d,d)
-        """
-        h, _ = self.lstm_layer(x) # layer的层也许可以改一下？
+        h, _ = self.rnn_layer(x)
         h = self.dropout_layer(h)
         y = self.out_layer(h)
 
         y = torch.sigmoid(y)  # torch.Size([batch_size,seq_len,num_c])
         y = y[:,:-1,:]
-        # 应该检测一下,y在各个时间步的值
+
         return self._get_next_pred(y, skill), None

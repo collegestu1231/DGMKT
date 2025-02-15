@@ -3,7 +3,7 @@ import os
 import numpy as np
 import torch
 
-from torch.nn import Module, Embedding, RNN, Linear, Dropout,LSTM,GRU
+from torch.nn import Module, Embedding, RNN, Linear, Dropout
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
@@ -21,7 +21,7 @@ class DKT(Module):
         if emb_type.startswith("qid"):
             self.interaction_emb = Embedding(self.num_c * 2+1, self.emb_size)
         self.change_dim = Linear(self.emb_size * 2, self.emb_size)
-        self.lstm_layer = RNN(self.emb_size, self.hidden_size, batch_first=True)
+        self.rnn_Layer = RNN(self.emb_size, self.hidden_size, batch_first=True)
         self.dropout_layer = Dropout(dropout)
         self.out_layer = Linear(self.hidden_size, self.num_c)
     def _get_next_pred(self, res, skill):
@@ -38,8 +38,8 @@ class DKT(Module):
             x = skill + self.num_c * answer_x
             xemb = self.interaction_emb(x)
         # print(f"xemb.shape is {xemb.shape}")(b,l,d)
-        # print('你好',self.lstm_layer)(d,d)
-        h, _ = self.lstm_layer(xemb)
+        # print('你好',self.rnn_Layer)(d,d)
+        h, _ = self.rnn_Layer(xemb)
         h = self.dropout_layer(h)
         y = self.out_layer(h)
         step, concepts = find_unique_steps(skill[0, :])

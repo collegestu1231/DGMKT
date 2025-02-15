@@ -3,7 +3,7 @@ from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
 import numpy as np
 import torch
 from hgnn_models import HGNN
-from torch.nn import Module, Embedding, RNN, Linear, Dropout,LSTM,GRU
+from torch.nn import Module, Embedding, RNN, Linear, Dropout
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from torch_geometric.data import Data
@@ -34,8 +34,8 @@ class DKT(Module):
         self.fc_d = Linear(self.emb_size, self.num_c)
         self.pos = nn.Parameter(torch.rand([500, 500, 1]))
         self.fc_h = Linear(self.emb_size,self.num_c)
-        self.lstm_layer_DG = RNN(self.emb_size*3, self.hidden_size, batch_first=True)
-        self.lstm_layer_HG = RNN(self.emb_size*3, self.hidden_size,batch_first=True)
+        self.rnn_Layer_DG = RNN(self.emb_size*3, self.hidden_size, batch_first=True)
+        self.rnn_Layer_HG = RNN(self.emb_size*3, self.hidden_size,batch_first=True)
         self.fc_ensemble = Linear(2 * self.emb_size, self.num_c)
         self.dropout_layer = Dropout(dropout)
         self.out_layer = Linear(self.hidden_size, self.num_c)
@@ -112,8 +112,8 @@ class DKT(Module):
         x_HG = torch.cat((stu_h, x),dim=-1) # 学生做了哪些题目
         # x = self.change_dim(x)
 
-        h_DG, _ = self.lstm_layer_DG(x_DG) # layer的层也许可以改一下？
-        h_HG, _ = self.lstm_layer_HG(x_HG) # layer的层也许可以改一下？
+        h_DG, _ = self.rnn_Layer_DG(x_DG) # layer的层也许可以改一下？
+        h_HG, _ = self.rnn_Layer_HG(x_HG) # layer的层也许可以改一下？
 
         logit_h = self.fc_h(h_HG)
         logit_d = self.fc_d(h_DG)
