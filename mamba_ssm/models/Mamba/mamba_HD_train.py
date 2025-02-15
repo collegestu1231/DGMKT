@@ -36,8 +36,7 @@ if __name__ == '__main__':
 
     # dataset params
     parser.add_argument('--dataset', type=str, default='statics',
-                        choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid', 'assist2015',
-                                 "synthetic"])
+                        choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     # model params
     parser.add_argument('--layer', type=int, default=4, help='The number of model layers') # Best 4

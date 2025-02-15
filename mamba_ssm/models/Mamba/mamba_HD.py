@@ -230,8 +230,8 @@ class MixerModel(nn.Module):
 class MambaKTHeadModel(nn.Module, GenerationMixin):
     def __init__(
             self,
-            config: MambaConfig,  # 模型各种配置参数
-            G=None,  # 学生关于问题的关系矩阵
+            config: MambaConfig,  
+            G=None,  
             initializer_cfg=None,
             device=None,
             dtype=None,
@@ -265,7 +265,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         self.G = G
         self.gcn_conv1 = GCNConv(d_model, 8)
         self.gcn_conv2 = GCNConv(8, d_model)
-        emb = nn.Embedding(G.shape[0], d_model)  # 学生数目=4151
+        emb = nn.Embedding(G.shape[0], d_model)  
         self.stu = emb(torch.LongTensor([i for i in range(G.shape[0])])).cuda()
         self.pos = nn.Parameter(torch.rand([500, 500, 1]))
         self.difficulty = nn.Parameter(torch.FloatTensor(24, 500))
@@ -286,7 +286,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
             fused_add_norm=fused_add_norm,  # True
             residual_in_fp32=residual_in_fp32,  # True
             **factory_kwargs,
-        )  # 构建MixerModel作为KT模型的主干网络(backbone)
+        )  
         self.backbone_D = MixerModel(
             d_model=d_model,
             n_layer=n_layer,
@@ -300,7 +300,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
             fused_add_norm=fused_add_norm,  # True
             residual_in_fp32=residual_in_fp32,  # True
             **factory_kwargs,
-        )  # 构建MixerModel作为KT模型的主干网络(backbone)
+        )  
 
         self.w1 = nn.Linear(d_model, d_model)
         self.w2 = nn.Linear(d_model, d_model)
@@ -308,8 +308,8 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         self.fc_d = nn.Linear(d_model, self.num_c)
         self.fc_h = nn.Linear(d_model, self.num_c)
         self.fc_ensemble = nn.Linear(2 * d_model, self.num_c)
-        self.lm_head = nn.Linear(d_model, num_c, bias=False, **factory_kwargs)  # 构建语言模型输出头,一个线性层,
-        # 将MixerModel的输出转化为每个位置的词表概率分布
+        self.lm_head = nn.Linear(d_model, num_c, bias=False, **factory_kwargs) 
+        
         self.sigmoid = nn.Sigmoid()
         # Initialize weights and apply final processing
         self.apply(
@@ -320,9 +320,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
             )
         )
     def _generate_edge_index(self, skill):
-        """
-        根据学生的做题序列 (skill) 生成边索引 (edge_index)，使用题目编号本身作为边索引
-        """
+
         batch_size, seq_len = skill.size()
         all_edge_indices = []
 
@@ -333,7 +331,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
             edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()  # (2, seq_len-1)
             all_edge_indices.append(edge_index)
 
-        return all_edge_indices  # 返回每个学生的 edge_index 列表
+        return all_edge_indices 
     def _get_next_pred(self, res, skill):  # (B,L-1,D ),
         one_hot = torch.eye(self.num_c, device=res.device)
         one_hot = torch.cat((one_hot, torch.zeros(1, self.num_c).to(device)), dim=0)
