@@ -352,10 +352,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         # student b,l
 
         # H Graph
-        # 1~660
-        # 0~659
-        # print(skill[0:5,0:20])
-        #print(torch.min(skill))
+
         temp_answer = answer
         student = F.one_hot(student - 1, num_classes=self.G.shape[0])  # b,l,num_stu
         stu_embedding = self.net(self.stu, self.G)  # torch.Size([stu_num, dim]) 把这里直接做一个UMAP会怎么样呢?
@@ -364,87 +361,6 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         # print(stu_h)
         mask = torch.ne(answer, 2).unsqueeze(-1).float()  # [b, l, 1]
 
-        # print(mask_stu_h[0,0,:])
-        # print(mask_stu_h[0,-1,:])
-        # print(mask_stu_h[:, 0, :].shape)
-        """
-        if cur is not None:
-            i=0
-            mask_stu_h = stu_h * mask
-            vis_stu_h = mask_stu_h[:, 0, :]  # Taking the first student ID row from each batch [b, d]
-            vis_stu_h = vis_stu_h.detach().cpu().numpy()
-
-            # Use UMAP to reduce dimensionality to 2D
-            reducer = UMAP(n_components=2, random_state=0)
-            vis_stu_h_umap = reducer.fit_transform(
-                vis_stu_h)  # Each point's coordinates in 2D space, shape = (b, 2)
-
-            # Visualize the results, showing all points and the specified three points
-            plt.figure(figsize=(10, 6))  # Set canvas size
-
-            # Plot the base point (solid circle)
-
-            far_label = False
-            close_label = False
-            drawn_points = set()
-
-            # Plot the farthest points (X marker), avoiding overlaps with closest points
-            for idx in far:
-                coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
-                if coord not in drawn_points:
-                    if not far_label:
-                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black',
-                                    s=100,
-                                    linewidths=2,
-                                    label='Farth Points')
-                        i=i+1
-                        far_label = True
-                    else:
-                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black',
-                                    s=100,
-                                    linewidths=2)
-                        i = i + 1
-                    drawn_points.add(coord)
-
-            # Plot the closest points (hollow circles), avoiding overlaps
-            for idx in clo:
-                coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
-                if coord not in drawn_points:
-                    if not close_label:
-                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596', edgecolors='black',
-                                    linewidths=2, s=100, label='Close Points')
-                        close_label = True
-                        i = i + 1
-                    else:
-                        plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596', edgecolors='black',
-                                    linewidths=2, s=100)
-                        i = i + 1
-                    drawn_points.add(coord)
-            plt.scatter(vis_stu_h_umap[0, 0], vis_stu_h_umap[0, 1], c='r', alpha=0.9, edgecolors='w',
-                        linewidths=0.5,
-                        s=100, label='Base Point')
-            print(i+1)
-            # plt.tick_params(axis='both', labelsize=16)
-            # 禁用坐标轴刻度
-            plt.tick_params(axis='both', which='both', left=False, right=False, bottom=False, top=False,
-                            labelleft=False, labelbottom=False)
-
-            # 其余代码保持不变
-
-            # Add legend, titles, and labels
-            plt.legend(fontsize=16)  # Increase font size of the legend
-            plt.title("", fontsize=16, weight='bold')
-            plt.xlabel("", fontsize=18)
-            plt.ylabel("", fontsize=18)
-            plt.gca().spines['bottom'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
-            plt.gca().spines['left'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
-            plt.gca().spines['top'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
-            plt.gca().spines['right'].set_linewidth(3)  # 使用当前轴（gca）来设置底部线宽
-            plt.grid(True, linestyle='--', alpha=0.5, linewidth=2)
-
-            plt.show()
-
-        """
         # D Graph
         all_edge_indices = self._generate_edge_index(skill)  # 0~660
         all_stu_h = []
@@ -473,65 +389,6 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         # 恢复原始形状
         all_stu_h = all_stu_h.unsqueeze(1).expand(-1, skill.shape[1], -1)
         # print(all_stu_h.shape)
-        # 模型可视化部分
-
-
-        # if cur is not None:
-        #     mask_stu_h = all_stu_h * mask
-        #     vis_stu_h = mask_stu_h[:, 0, :]  # Taking the first student ID row from each batch [b, d]
-        #     vis_stu_h = vis_stu_h.detach().cpu().numpy()
-        #
-        #     # Use UMAP to reduce dimensionality to 2D
-        #     reducer = UMAP(n_components=2, random_state=0)
-        #     vis_stu_h_umap = reducer.fit_transform(vis_stu_h)  # Each point's coordinates in 2D space, shape = (b, 2)
-        #
-        #     # Visualize the results, showing all points and the specified three points
-        #     plt.figure(figsize=(10, 6))  # Set canvas size
-        #
-        #     # Plot the base point (solid circle)
-        #
-        #     far_label = False
-        #     close_label = False
-        #     drawn_points = set()
-        #
-        #     # Plot the farthest points (X marker), avoiding overlaps with closest points
-        #     for idx in far:
-        #         coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
-        #         if coord not in drawn_points:
-        #             if not far_label:
-        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black', s=100,
-        #                             linewidths=2,
-        #                             label='Farth Points')
-        #                 far_label = True
-        #             else:
-        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#508D4E', edgecolors='black', s=100,
-        #                             linewidths=2)
-        #             drawn_points.add(coord)
-        #
-        #     # Plot the closest points (hollow circles), avoiding overlaps
-        #     for idx in clo:
-        #         coord = (vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1])
-        #         if coord not in drawn_points:
-        #             if not close_label:
-        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596',edgecolors='black',
-        #                             linewidths=2, s=100, label='Close Points')
-        #                 close_label = True
-        #             else:
-        #                 plt.scatter(vis_stu_h_umap[idx, 0], vis_stu_h_umap[idx, 1], c='#FCF596',edgecolors='black',
-        #                             linewidths=2, s=100)
-        #             drawn_points.add(coord)
-        #     plt.scatter(vis_stu_h_umap[0, 0], vis_stu_h_umap[0, 1], c='r', alpha=0.9, edgecolors='w', linewidths=0.5,
-        #                 s=100, label='Base Point')
-        #     # plt.tick_params(axis='both', labelsize=16)
-        #     plt.tick_params(axis='both', which='both', left=False, right=False, bottom=False, top=False,
-        #                     labelleft=False, labelbottom=False)
-        #     # Add legend, titles, and labels
-        #     plt.legend(fontsize=16)  # Increase font size of the legend
-        #     plt.title("", fontsize=16, weight='bold')
-        #     plt.xlabel("", fontsize=18)
-        #     plt.ylabel("", fontsize=18)
-        #     plt.grid(True, linestyle='--', alpha=0.5,linewidth=2)
-        #     plt.show()
 
         # Basic embedding
         skill_embedding = self.skill_embedding(skill)
@@ -556,24 +413,7 @@ class MambaKTHeadModel(nn.Module, GenerationMixin):
         h_HG = theta * h_HG
         h_DG = (1 - theta) * h_DG
         emseble_logit = self.fc_ensemble(torch.cat([h_HG, h_DG], -1))
-        # 应该检测一下,y在各个时间步的值
-        # print(skill[0,:])
-        concepts = []
-        # step,concepts = find_unique_steps(skill[0,:])
-        #print(step)
-        # print(concepts)
-        # print(skill[0,:step+1])
-        # print(temp_answer[0,:step+1])
-        #print(self.sigmoid(logit_h[0,0,:5]))
-        #print(self.sigmoid(logit_h[0, effective_lengths[0]-1, :5]))
-        #print(effective_lengths[0]-1)
-        #plot_radar_chart(self.sigmoid(logit_h[0,0:,concepts]),self.sigmoid(logit_h[0, step, concepts]))
 
-        # print(self.sigmoid(logit_h[0,0,:5]))
-        # print(self.sigmoid(logit_h[0, -1, :5]))
-        # plot_mastery_heatmap(self.sigmoid(logit_h[0,0:step+1,concepts]),concepts)
-        # print((self.sigmoid(logit_h[0,0:step+1,concepts])+self.sigmoid(logit_d[0,0:step+1,concepts])+self.sigmoid(emseble_logit[0,0:step+1,concepts]))/3.0)
-        #plot_radar_chart(torch.tensor([0.2,0.2,0.2,0.2,0.2]), self.sigmoid(logit_h[0, step, concepts]),concepts,step+1)
         logit_h, logit_d, emseble_logit = logit_h[:, :-1, :], logit_d[:, :-1, :], emseble_logit[:, :-1, :]
         return self._get_next_pred(logit_h, skill), self._get_next_pred(logit_d, skill), self._get_next_pred(
             emseble_logit, skill)
