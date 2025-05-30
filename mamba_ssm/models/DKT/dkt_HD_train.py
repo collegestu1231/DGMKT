@@ -23,6 +23,7 @@ from mamba_ssm.models.config_mamba import MambaConfig
 from hgnn_models import hypergraph_utils as hgut
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Script to train DKT with DGSPM')
@@ -87,7 +88,7 @@ if __name__ == '__main__':
     np.random.seed(seedNum)
 
     log_file = os.path.join(
-        'Test_result/dkt_HD_d{}_{}_test_result.txt'.format(params.d_model, params.data_name))
+        'dkt_HD_d{}_{}_test_result.txt'.format(params.d_model, params.data_name))
 
     log = open(log_file, 'w')
 
