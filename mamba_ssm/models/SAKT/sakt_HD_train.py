@@ -24,7 +24,7 @@ from hgnn_models import hypergraph_utils as hgut
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script to train SAKT_HD')
+    parser = argparse.ArgumentParser(description='Script to train SAKT with DGSPM')
     parser.add_argument('--max_iter', type=int, default=200, help='number of iterations')
     parser.add_argument('--seed', type=int, default=224, help='default seed')
     parser.add_argument('--lr', type=float, default=0.001, help='Initial learning rate.')
@@ -33,8 +33,7 @@ if __name__ == '__main__':
                         help='After how many epochs to decay LR by a factor of gamma.')
 
     parser.add_argument('--dataset', type=str, default='assist2009_pid',
-                        choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid', 'assist2015',
-                                 "synthetic"])
+                        choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     parser.add_argument('--layer', type=int, default=1, help='The number of model layers')
     parser.add_argument('--d_model', type=int, default=256, help='The dimension of the model')
@@ -60,13 +59,6 @@ if __name__ == '__main__':
         params.data_dir = '../dataset/' + dataset
         params.data_name = dataset
 
-    if dataset in {"assist2015"}:
-        params.n_skill = 100
-        params.n_stu = 19840
-        params.batch_size = 24
-        params.seqlen = 200
-        params.data_dir = '../dataset/' + dataset
-        params.data_name = dataset
 
     if dataset in {"assist2017_pid"}:
         params.n_stu = 1709
@@ -84,12 +76,7 @@ if __name__ == '__main__':
         params.data_dir = '../dataset/' + dataset
         params.data_name = dataset
 
-    if dataset in {"synthetic"}:
-        params.n_skill = 49
-        params.batch_size = 24
-        params.seqlen = 200
-        params.data_dir = '../dataset/' + dataset
-        params.data_name = dataset
+
 
     # Seed Setup
     seedNum = params.seed
