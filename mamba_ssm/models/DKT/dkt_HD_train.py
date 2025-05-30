@@ -25,7 +25,7 @@ from hgnn_models import hypergraph_utils as hgut
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Script to train Mamba')
+    parser = argparse.ArgumentParser(description='Script to train DKT with DGSPM')
     parser.add_argument('--max_iter', type=int, default=200, help='number of iterations')
     parser.add_argument('--seed', type=int, default=224, help='default seed')
     parser.add_argument('--lr', type=float, default=0.001, help='Initial learning rate.')
