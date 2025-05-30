@@ -26,7 +26,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
     # train params
-    parser = argparse.ArgumentParser(description='Script to train Mamba')
+    parser = argparse.ArgumentParser(description='Script to train DGMKT')
     parser.add_argument('--max_iter', type=int, default=200, help='number of iterations')
     parser.add_argument('--seed', type=int, default=224, help='default seed')
     parser.add_argument('--lr', type=float, default=0.001, help='Initial learning rate.')
@@ -68,13 +68,6 @@ if __name__ == '__main__':
         # for assist2019 the best parameter are (d_model = 512, layer = 4)
         params.kd_loss = 1 / (params.batch_size * (params.seqlen - 1))
 
-    if dataset in {"assist2015"}:
-        params.n_skill = 100
-        params.n_stu = 19840
-        params.batch_size = 24
-        params.seqlen = 500
-        params.data_dir = '../dataset/' + dataset
-        params.data_name = dataset
 
     if dataset in {"assist2017_pid"}:
         params.n_stu = 1709
@@ -94,18 +87,8 @@ if __name__ == '__main__':
         params.data_dir = '../dataset/' + dataset
         params.data_name = dataset
         params.kd_loss = 1/(params.batch_size*(params.seqlen-1))
-        # for kddcup2010 the best parameter are (d_model = 768, layer = 6)
-        # 6,512,kd_loss !=0, result: 0.7966 ± 0.0056 (!=0 1/(params.batch_size*(params.seqlen-1)))
-        # 6,512,kd_loss ==0, result: 0.7964 ± 0.0057
-        # 6,768,kd_loss ==0, result: 0.7931 ± 0.0047
-        # 6,768,kd_loss !=0, result: 0.7978 ± 0.0050
-        # 6,640,kd_loss !=0, result: 0.7965 ± 0.0080
-    if dataset in {"synthetic"}:
-        params.n_skill = 49
-        params.batch_size = 24
-        params.seqlen = 500
-        params.data_dir = '../dataset/' + dataset
-        params.data_name = dataset
+
+
 
     # Seed Setup
     seedNum = params.seed
@@ -215,7 +198,7 @@ if __name__ == '__main__':
                     stu = torch.where(stu == -1, torch.tensor([params.n_stu]), stu)
                     skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
 
-                    # diff = extract_floats_from_tensor(skill, './dataset/assist2009_pid/question_difficulty.json')
+
                     h_logit, d_logit, emseble_logit = net(stu, skill, answer,cur=0,clo=min_indx,far=max_indx)
                     loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
 
