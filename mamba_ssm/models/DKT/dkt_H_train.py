@@ -33,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', type=int, default=50,
                         help='After how many epochs to decay LR by a factor of gamma.')
 
-    parser.add_argument('--dataset', type=str, default='assist2009_pid',
+    parser.add_argument('--dataset', type=str, default='kddcup2010',
                         choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid', 'assist2015',
                                  "synthetic"])
 
@@ -61,13 +61,7 @@ if __name__ == '__main__':
         params.data_dir = '../dataset/' + dataset
         params.data_name = dataset
 
-    if dataset in {"assist2015"}:
-        params.n_skill = 100
-        params.n_stu = 19840
-        params.batch_size = 24
-        params.seqlen = 200
-        params.data_dir = '../dataset/' + dataset
-        params.data_name = dataset
+
 
     if dataset in {"assist2017_pid"}:
         params.n_stu = 1709
@@ -85,12 +79,7 @@ if __name__ == '__main__':
         params.data_dir = '../dataset/' + dataset
         params.data_name = dataset
 
-    if dataset in {"synthetic"}:
-        params.n_skill = 49
-        params.batch_size = 24
-        params.seqlen = 200
-        params.data_dir = '../dataset/' + dataset
-        params.data_name = dataset
+
 
     # Seed Setup
     seedNum = params.seed
@@ -99,7 +88,7 @@ if __name__ == '__main__':
     np.random.seed(seedNum)
 
     log_file = os.path.join(
-        'Test_result/dkt_H_d{}_{}_test_result.txt'.format( params.d_model, params.data_name))
+        'dkt_H_d{}_{}_test_result.txt'.format( params.d_model, params.data_name))
 
     log = open(log_file, 'w')
 
@@ -226,8 +215,8 @@ if __name__ == '__main__':
                 all_y_pred_val = (all_y_pred_val > 0.5).astype(int)
                 acc_val = accuracy_score(all_y_true_val, all_y_pred_val)
                 f1 = f1_score(all_y_true_val, all_y_pred_val)
-                print('y_pred distribution:', np.mean(all_y_pred_val), np.min(all_y_pred_val), np.max(all_y_pred_val))
-                print('val epoch: ', (epoch + 1), 'val loss: ', loss.item(), 'val auc: ', auc_val, 'val acc: ', acc_val,
+
+                print('val epoch: ', (epoch + 1), 'val loss: ', np.average(val_total_loss), 'val auc: ', auc_val, 'val acc: ', acc_val,
                       'f1_score', f1)
 
                 save_model_file = os.path.join(

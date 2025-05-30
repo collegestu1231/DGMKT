@@ -247,7 +247,7 @@ if __name__ == '__main__':
                 all_y_pred_val = (all_y_pred_val > 0.5).astype(int)
                 acc_val = accuracy_score(all_y_true_val, all_y_pred_val)
                 f1 = f1_score(all_y_true_val, all_y_pred_val)
-                print('val epoch: ', (epoch + 1), 'val loss: ', loss.item(), 'val auc: ', auc_val, 'val acc: ', acc_val,
+                print('val epoch: ', (epoch + 1), 'val loss: ', np.average(val_total_loss), 'val auc: ', auc_val, 'val acc: ', acc_val,
                       'f1_score', f1)
 
                 save_model_file = os.path.join(

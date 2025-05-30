@@ -34,7 +34,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', type=int, default=50,
                         help='After how many epochs to decay LR by a factor of gamma.')
 
-    parser.add_argument('--dataset', type=str, default='assist2009_pid',
+    parser.add_argument('--dataset', type=str, default='kddcup2010',
                         choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     # parser.add_argument('--layer', type=int, default=8, help='The number of model layers')
@@ -142,49 +142,49 @@ if __name__ == '__main__':
                                       params.d_model))
         load_model_path = os.path.join(save_model_file, 'kt_model_best.pt')
         
-        if os.path.exists(load_model_path):
-
-            net.load_state_dict(torch.load(load_model_path))
-            net.eval()
-            y_true_test_list = []
-            y_pred_test_list = []
-            test_N = int(math.ceil(len(test_skill_data) / params.batch_size))
-            with torch.no_grad():
-                for idx in range(test_N):
-                    test_batch_skill = test_skill_data[idx * params.batch_size:(idx + 1) * params.batch_size]
-                    test_batch_answer = test_answer_data[idx * params.batch_size:(idx + 1) * params.batch_size]
-                    test_batch_stu = test_stu_data[idx * params.batch_size:(idx + 1) * params.batch_size]
-                    skill = torch.LongTensor(test_batch_skill)
-                    answer = torch.LongTensor(test_batch_answer)
-                    stu = torch.LongTensor(test_batch_stu)
-                    skill = torch.where(skill == -1, torch.tensor([params.n_skill]), skill)
-                    answer = torch.where(answer == -1, torch.tensor([2]), answer)
-                    stu = torch.where(stu == -1, torch.tensor([params.n_stu]), stu)
-                    skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
-                    # diff = extract_floats_from_tensor(skill, './dataset/assist2009_pid/question_difficulty.json')
-                    h_logit, d_logit, emseble_logit = net(stu, skill, answer)
-                    loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
-
-                    y_true_test_list.append(y_true.cpu().detach().numpy())
-                    y_pred_test_list.append(y_pred.cpu().detach().numpy())
-
-                all_y_true_test = np.concatenate(y_true_test_list, 0)
-                all_y_pred_test = np.concatenate(y_pred_test_list, 0)
-                acc_y_pred_test = (all_y_pred_test > 0.5).astype(int)
-
-                auc_test = roc_auc_score(all_y_true_test, all_y_pred_test)
-                acc_test = accuracy_score(all_y_true_test, acc_y_pred_test)
-
-                print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test acc: ', acc_test)
-                auc_test_list.append(auc_test)
-                acc_test_list.append(acc_test)
-                print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test acc: ', acc_test,
-                      file=log)
-
-                del auc_test
-                gc.collect()
-                torch.cuda.empty_cache()
-            continue
+        # if os.path.exists(load_model_path):
+        #
+        #     net.load_state_dict(torch.load(load_model_path))
+        #     net.eval()
+        #     y_true_test_list = []
+        #     y_pred_test_list = []
+        #     test_N = int(math.ceil(len(test_skill_data) / params.batch_size))
+        #     with torch.no_grad():
+        #         for idx in range(test_N):
+        #             test_batch_skill = test_skill_data[idx * params.batch_size:(idx + 1) * params.batch_size]
+        #             test_batch_answer = test_answer_data[idx * params.batch_size:(idx + 1) * params.batch_size]
+        #             test_batch_stu = test_stu_data[idx * params.batch_size:(idx + 1) * params.batch_size]
+        #             skill = torch.LongTensor(test_batch_skill)
+        #             answer = torch.LongTensor(test_batch_answer)
+        #             stu = torch.LongTensor(test_batch_stu)
+        #             skill = torch.where(skill == -1, torch.tensor([params.n_skill]), skill)
+        #             answer = torch.where(answer == -1, torch.tensor([2]), answer)
+        #             stu = torch.where(stu == -1, torch.tensor([params.n_stu]), stu)
+        #             skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
+        #             # diff = extract_floats_from_tensor(skill, './dataset/assist2009_pid/question_difficulty.json')
+        #             h_logit, d_logit, emseble_logit = net(stu, skill, answer)
+        #             loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
+        #
+        #             y_true_test_list.append(y_true.cpu().detach().numpy())
+        #             y_pred_test_list.append(y_pred.cpu().detach().numpy())
+        #
+        #         all_y_true_test = np.concatenate(y_true_test_list, 0)
+        #         all_y_pred_test = np.concatenate(y_pred_test_list, 0)
+        #         acc_y_pred_test = (all_y_pred_test > 0.5).astype(int)
+        #
+        #         auc_test = roc_auc_score(all_y_true_test, all_y_pred_test)
+        #         acc_test = accuracy_score(all_y_true_test, acc_y_pred_test)
+        #
+        #         print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test acc: ', acc_test)
+        #         auc_test_list.append(auc_test)
+        #         acc_test_list.append(acc_test)
+        #         print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test acc: ', acc_test,
+        #               file=log)
+        #
+        #         del auc_test
+        #         gc.collect()
+        #         torch.cuda.empty_cache()
+        #     continue
 
 
         # train and validation
@@ -252,7 +252,7 @@ if __name__ == '__main__':
                     # diff = extract_floats_from_tensor(skill,'./dataset/assist2009_pid/question_difficulty.json')
                     # pred_res, features = net(skill, answer,diff)
                     h_logit, d_logit, emseble_logit = net(stu, skill, answer)
-                    loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
+                    loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer,False)
 
                     val_total_loss.append(loss.item())
                     y_pred_val_list.append(y_pred.cpu().detach().numpy())
@@ -265,7 +265,7 @@ if __name__ == '__main__':
                 all_y_pred_val = (all_y_pred_val > 0.5).astype(int)
                 acc_val = accuracy_score(all_y_true_val, all_y_pred_val)
                 f1 = f1_score(all_y_true_val, all_y_pred_val)
-                print('val epoch: ', (epoch + 1), 'val loss: ', loss.item()/3, 'val auc: ', auc_val, 'val acc: ', acc_val,
+                print('val epoch: ', (epoch + 1), 'val loss: ', np.average(val_total_loss), 'val auc: ', auc_val, 'val acc: ', acc_val,
                       'f1_score', f1)
 
 
@@ -308,7 +308,7 @@ if __name__ == '__main__':
                 skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
                 # diff = extract_floats_from_tensor(skill, './dataset/assist2009_pid/question_difficulty.json')
                 h_logit, d_logit, emseble_logit = net(stu, skill, answer)
-                loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
+                loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer,False)
 
                 y_true_test_list.append(y_true.cpu().detach().numpy())
                 y_pred_test_list.append(y_pred.cpu().detach().numpy())
