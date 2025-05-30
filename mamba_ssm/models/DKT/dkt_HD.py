@@ -1,5 +1,5 @@
 import os
-from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
+# from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
 import numpy as np
 import torch
 from hgnn_models import HGNN
@@ -122,7 +122,7 @@ class DKT(Module):
         h_DG = (1 - theta) * h_DG
         emseble_logit = self.fc_ensemble(torch.cat([h_HG, h_DG], -1))
         # 应该检测一下,y在各个时间步的值
-        step, concepts = find_unique_steps(skill[0, :])
+        # step, concepts = find_unique_steps(skill[0, :])
         # print(step)
         # print(concepts)
         # print(skill[0, :step + 1])
