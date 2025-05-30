@@ -18,7 +18,7 @@ from pytorchtools import EarlyStopping
 from tqdm import tqdm
 from dkt import DKT
 from torch.autograd import grad
-from mamba_ssm.models.config_mamba import MambaConfig
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     np.random.seed(seedNum)
 
     log_file = os.path.join(
-        'Test_result/dkt_d{}_{}_test_result.txt'.format(params.d_model, params.data_name))
+        'dkt_d{}_{}_test_result.txt'.format(params.d_model, params.data_name))
 
   
     log = open(log_file, 'w')
