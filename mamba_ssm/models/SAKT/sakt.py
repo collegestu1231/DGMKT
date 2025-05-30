@@ -1,7 +1,7 @@
 import copy
 import math
 import numpy as np
-from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -163,7 +163,7 @@ class SAKT(nn.Module):
                          self.pos_value_embeds, mask)
             outputs = self.dropout(outputs + F.relu(residual))
 
-        step, concepts = find_unique_steps(skill_ids[0, :])
+        # step, concepts = find_unique_steps(skill_ids[0, :])
         y = self.sigmoid(self.lin_out(outputs).squeeze(-1))
 
         return self.sigmoid(self.lin_out(outputs).squeeze(-1)[:,1:]),None

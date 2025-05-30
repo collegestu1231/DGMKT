@@ -34,7 +34,7 @@ if __name__ == '__main__':
                         choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     parser.add_argument('--layer', type=int, default=1, help='The number of model layers')
-    parser.add_argument('--d_model', type=int, default=256, help='The dimension of the model')
+    parser.add_argument('--d_model', type=int, default=512, help='The dimension of the model')
     parser.add_argument('--num_heads', type=int, default=8, help='The head num of Multi-head-attention')
 
     params = parser.parse_args()
@@ -76,7 +76,7 @@ if __name__ == '__main__':
     np.random.seed(seedNum)
 
     log_file = os.path.join(
-        'Test_result/sakt_D_l{}d{}_{}_test_result.txt'.format(params.layer, params.d_model, params.data_name))
+        'sakt_D_l{}d{}_{}_test_result.txt'.format(params.layer, params.d_model, params.data_name))
 
     log = open(log_file, 'w')
 

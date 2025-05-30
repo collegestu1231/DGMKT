@@ -32,12 +32,11 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', type=int, default=50,
                         help='After how many epochs to decay LR by a factor of gamma.')
 
-    parser.add_argument('--dataset', type=str, default='assist2009_pid',
-                        choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid', 'assist2015',
-                                 "synthetic"])
+    parser.add_argument('--dataset', type=str, default='kddcup2010',
+                        choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     parser.add_argument('--layer', type=int, default=1, help='The number of model layers')
-    parser.add_argument('--d_model', type=int, default=256, help='The dimension of the model')
+    parser.add_argument('--d_model', type=int, default=512, help='The dimension of the model')
     parser.add_argument('--num_heads', type=int, default=8, help='The head num of Multi-head-attention')
 
     params = parser.parse_args()

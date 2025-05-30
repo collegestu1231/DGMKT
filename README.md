@@ -16,7 +16,7 @@ We use four datasets(statics,assistment2017,assistment2009,kddcup2010) to demons
 ## Reproduce
 if you want to reproduce DGMKT, please run the follow command to compile the files in csrc/selective_scan into 'selective_scan_cuda.cpython-38-x86_64-linux-gnu.so' (may be different up to your environments)
 ```{bash}
-pip install . 
+python setup.py build
 ```
 
 

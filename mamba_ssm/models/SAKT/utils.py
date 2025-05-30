@@ -32,7 +32,7 @@ class DUALKTLoss(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.lossFun = nn.BCELoss()
 
-    def forward(self,h_logit,d_logit,emseble_logit,ground_truth):
+    def forward(self,h_logit,d_logit,emseble_logit,ground_truth,train=True):
         y_h = self.sigmoid(h_logit)
         y_d = self.sigmoid(d_logit)
         y_e = self.sigmoid(emseble_logit)

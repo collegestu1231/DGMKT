@@ -32,11 +32,11 @@ if __name__ == '__main__':
     parser.add_argument('--lr-decay', type=int, default=50,
                         help='After how many epochs to decay LR by a factor of gamma.')
 
-    parser.add_argument('--dataset', type=str, default='assist2009_pid',
+    parser.add_argument('--dataset', type=str, default='kddcup2010',
                         choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     parser.add_argument('--layer', type=int, default=1, help='The number of model layers')
-    parser.add_argument('--d_model', type=int, default=256, help='The dimension of the model')
+    parser.add_argument('--d_model', type=int, default=512, help='The dimension of the model')
     parser.add_argument('--num_heads', type=int, default=8, help='The head num of Multi-head-attention')
 
     params = parser.parse_args()
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     np.random.seed(seedNum)
 
     log_file = os.path.join(
-        'Test_result/sakt_HD_l{}d{}_{}_test_result.txt'.format(params.layer, params.d_model, params.data_name))
+        'sakt_HD_l{}d{}_{}_test_result.txt'.format(params.layer, params.d_model, params.data_name))
 
     log = open(log_file, 'w')
 
@@ -284,7 +284,7 @@ if __name__ == '__main__':
                 acc_val = accuracy_score(all_y_true_val, all_y_pred_val)
                 f1 = f1_score(all_y_true_val, all_y_pred_val)
 
-                print('val epoch: ', (epoch + 1), 'val loss: ', loss.item(), 'val auc: ', auc_val, 'val acc: ', acc_val,
+                print('val epoch: ', (epoch + 1), 'val loss: ', np.average(val_total_loss), 'val auc: ', auc_val, 'val acc: ', acc_val,
                       'f1_score', f1)
 
                 save_model_file = os.path.join(
@@ -353,12 +353,12 @@ if __name__ == '__main__':
 
     print('average test auc:', np.round(np.mean(auc_test_list), decimals=4), u'\u00B1',
           np.round(np.std(auc_test_list), decimals=4))
-    print('average test auc:', np.round(np.mean(auc_test_list), decimals=4), u'\u00B1',
-          np.round(np.std(auc_test_list), decimals=4), file=log)
+    # print('average test auc:', np.round(np.mean(auc_test_list), decimals=4), u'\u00B1',
+    #       np.round(np.std(auc_test_list), decimals=4), file=log)
     print('average test acc:', np.round(np.mean(acc_test_list), decimals=4), u'\u00B1',
           np.round(np.std(acc_test_list), decimals=4))
-    print('average test acc:', np.round(np.mean(acc_test_list), decimals=4), u'\u00B1',
-          np.round(np.std(acc_test_list), decimals=4), file=log)
+    # print('average test acc:', np.round(np.mean(acc_test_list), decimals=4), u'\u00B1',
+    #       np.round(np.std(acc_test_list), decimals=4), file=log)
 
     del auc_test_list
     log.close()

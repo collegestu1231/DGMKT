@@ -49,7 +49,7 @@ class DATA(object):
         f_data.close()
 
         return np.array(skill_data).astype(int).reshape([-1, self.maxstep]), np.array(answer_data).astype(int).reshape(
-            [-1, self.maxstep]),in_num
+            [-1, self.maxstep])
 
 
 class PID_DATA(object):
