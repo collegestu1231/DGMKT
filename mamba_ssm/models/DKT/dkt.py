@@ -6,7 +6,7 @@ import torch
 from torch.nn import Module, Embedding, RNN, Linear, Dropout
 import torch.nn.functional as F
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
+
 class DKT(Module):
     def __init__(self, num_c, emb_size, dropout=0.1, emb_type='qid', emb_path="", pretrain_dim=768):
         super().__init__()
@@ -42,7 +42,7 @@ class DKT(Module):
         h, _ = self.rnn_Layer(xemb)
         h = self.dropout_layer(h)
         y = self.out_layer(h)
-        step, concepts = find_unique_steps(skill[0, :])
+
         # print(skill[0, :step + 1])
         # print(self.sigmoid(y[0, 0:step + 1, concepts]))
         y = torch.sigmoid(y)  # torch.Size([batch_size,seq_len,num_c])
