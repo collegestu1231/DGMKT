@@ -2,7 +2,7 @@
 import os
 
 os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
-from Test_file import remove_negative_ones,find_closest_and_farthest,find_closest_and_farthest_weight_jacc
+
 import math
 import gc
 import argparse
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                         help='After how many epochs to decay LR by a factor of gamma.')
 
     # dataset params
-    parser.add_argument('--dataset', type=str, default='statics',
+    parser.add_argument('--dataset', type=str, default='kddcup2010',
                         choices=['kddcup2010', 'statics', 'assist2017_pid', 'assist2009_pid'])
 
     # model params
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     np.random.seed(seedNum)
 
     log_file = os.path.join(
-        'Test_result/mamba_HD_l{}d{}k{}_{}_test_result.txt'.format(params.layer, params.d_model,params.kd_loss, params.data_name))
+        'mamba_HD_l{}d{}k{}_{}_test_result.txt'.format(params.layer, params.d_model,params.kd_loss, params.data_name))
 
     log = open(log_file, 'w')
 
@@ -164,64 +164,64 @@ if __name__ == '__main__':
                                                params.d_model))
         load_model_path = os.path.join(save_model_file, 'kt_model_best.pt')
 
-        if os.path.exists(load_model_path):
-
-            load_model_path = os.path.join(save_model_file, 'kt_model_best.pt')
-            net.load_state_dict(torch.load(load_model_path))
-            net.eval()
-            y_true_test_list = []
-            y_pred_test_list = []
-
-            test_N = int(math.ceil(len(test_skill_data) / params.batch_size))
-            with torch.no_grad():
-                for idx in range(test_N):
-                    # print(idx)
-                    test_batch_skill = test_skill_data[idx * params.batch_size:(idx + 1) * params.batch_size]
-                    test_batch_answer = test_answer_data[idx * params.batch_size:(idx + 1) * params.batch_size]
-                    test_batch_stu = test_stu_data[idx * params.batch_size:(idx + 1) * params.batch_size]
-                    Test_skill = remove_negative_ones(test_batch_skill)
-                    min_indx = None
-                    max_indx = None
-                    # Test_h min_indx,max_indx = find_closest_and_farthest_weight_jacc(Test_skill)
-                    # Test_D min_indx,max_indx = find_closest_and_farthest(Test_skill)
-                    # min_indx,max_indx = find_closest_and_farthest(Test_skill)
-                    # print(min_indx,max_indx)
-                    # min_indx, max_indx = find_closest_and_farthest(Test_skill)
-
-                    min_indx, max_indx = find_closest_and_farthest_weight_jacc(Test_skill)
-                    skill = torch.LongTensor(test_batch_skill)
-                    answer = torch.LongTensor(test_batch_answer)
-                    stu = torch.LongTensor(test_batch_stu)
-
-                    skill = torch.where(skill == -1, torch.tensor([params.n_skill]), skill)
-                    answer = torch.where(answer == -1, torch.tensor([2]), answer)
-                    stu = torch.where(stu == -1, torch.tensor([params.n_stu]), stu)
-                    skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
-
-
-                    h_logit, d_logit, emseble_logit = net(stu, skill, answer,cur=0,clo=min_indx,far=max_indx)
-                    loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
-
-                    y_true_test_list.append(y_true.cpu().detach().numpy())
-                    y_pred_test_list.append(y_pred.cpu().detach().numpy())
-
-
-                all_y_true_test = np.concatenate(y_true_test_list, 0)
-                all_y_pred_test = np.concatenate(y_pred_test_list, 0)
-                acc_y_pred_test = (all_y_pred_test > 0.5).astype(int)
-
-                auc_test = roc_auc_score(all_y_true_test, all_y_pred_test)
-                acc_test = accuracy_score(all_y_true_test, acc_y_pred_test)
-
-                print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test acc: ', acc_test)
-                auc_test_list.append(auc_test)
-                acc_test_list.append(acc_test)
-                print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test_acc: ',acc_test,file=log)
-
-                del auc_test
-                gc.collect()
-                torch.cuda.empty_cache()
-            continue
+        # if os.path.exists(load_model_path):
+        #
+        #     load_model_path = os.path.join(save_model_file, 'kt_model_best.pt')
+        #     net.load_state_dict(torch.load(load_model_path))
+        #     net.eval()
+        #     y_true_test_list = []
+        #     y_pred_test_list = []
+        #
+        #     test_N = int(math.ceil(len(test_skill_data) / params.batch_size))
+        #     with torch.no_grad():
+        #         for idx in range(test_N):
+        #             # print(idx)
+        #             test_batch_skill = test_skill_data[idx * params.batch_size:(idx + 1) * params.batch_size]
+        #             test_batch_answer = test_answer_data[idx * params.batch_size:(idx + 1) * params.batch_size]
+        #             test_batch_stu = test_stu_data[idx * params.batch_size:(idx + 1) * params.batch_size]
+        #             Test_skill = remove_negative_ones(test_batch_skill)
+        #             min_indx = None
+        #             max_indx = None
+        #             # Test_h min_indx,max_indx = find_closest_and_farthest_weight_jacc(Test_skill)
+        #             # Test_D min_indx,max_indx = find_closest_and_farthest(Test_skill)
+        #             # min_indx,max_indx = find_closest_and_farthest(Test_skill)
+        #             # print(min_indx,max_indx)
+        #             # min_indx, max_indx = find_closest_and_farthest(Test_skill)
+        #
+        #             min_indx, max_indx = find_closest_and_farthest_weight_jacc(Test_skill)
+        #             skill = torch.LongTensor(test_batch_skill)
+        #             answer = torch.LongTensor(test_batch_answer)
+        #             stu = torch.LongTensor(test_batch_stu)
+        #
+        #             skill = torch.where(skill == -1, torch.tensor([params.n_skill]), skill)
+        #             answer = torch.where(answer == -1, torch.tensor([2]), answer)
+        #             stu = torch.where(stu == -1, torch.tensor([params.n_stu]), stu)
+        #             skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
+        #
+        #
+        #             h_logit, d_logit, emseble_logit = net(stu, skill, answer,cur=0,clo=min_indx,far=max_indx)
+        #             loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
+        #
+        #             y_true_test_list.append(y_true.cpu().detach().numpy())
+        #             y_pred_test_list.append(y_pred.cpu().detach().numpy())
+        #
+        #
+        #         all_y_true_test = np.concatenate(y_true_test_list, 0)
+        #         all_y_pred_test = np.concatenate(y_pred_test_list, 0)
+        #         acc_y_pred_test = (all_y_pred_test > 0.5).astype(int)
+        #
+        #         auc_test = roc_auc_score(all_y_true_test, all_y_pred_test)
+        #         acc_test = accuracy_score(all_y_true_test, acc_y_pred_test)
+        #
+        #         print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test acc: ', acc_test)
+        #         auc_test_list.append(auc_test)
+        #         acc_test_list.append(acc_test)
+        #         print('fold{}'.format(params.dataset_set_index), 'test auc: ', auc_test, 'test_acc: ',acc_test,file=log)
+        #
+        #         del auc_test
+        #         gc.collect()
+        #         torch.cuda.empty_cache()
+        #     continue
         # train and validation
         for epoch in range(params.max_iter):
 
@@ -287,7 +287,7 @@ if __name__ == '__main__':
                     # diff = extract_floats_from_tensor(skill,'./dataset/assist2009_pid/question_difficulty.json')
                     # pred_res, features = net(skill, answer,diff)
                     h_logit, d_logit, emseble_logit = net(stu, skill, answer)
-                    loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
+                    loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer,False)
 
                     val_total_loss.append(loss.item())
                     y_pred_val_list.append(y_pred.cpu().detach().numpy())
@@ -300,7 +300,7 @@ if __name__ == '__main__':
                 all_y_pred_val = (all_y_pred_val > 0.5).astype(int)
                 acc_val = accuracy_score(all_y_true_val, all_y_pred_val)
                 f1 = f1_score(all_y_true_val, all_y_pred_val)
-                print('val epoch: ', (epoch + 1), 'val loss: ', loss.item()/3, 'val auc: ', auc_val, 'val acc: ', acc_val,
+                print('val epoch: ', (epoch + 1), 'val loss: ', np.average(val_total_loss), 'val auc: ', auc_val, 'val acc: ', acc_val,
                       'f1_score', f1)
 
 
@@ -310,7 +310,7 @@ if __name__ == '__main__':
                 if not os.path.exists(save_model_file):
                     os.makedirs(save_model_file, exist_ok=True)
 
-                early_stopping(np.average(val_total_loss)/3, net,
+                early_stopping(np.average(val_total_loss), net,
                                save_path=os.path.join(save_model_file, 'kt_model_best.pt'))
                 if early_stopping.early_stop:
                     print("Early stopping")
@@ -343,7 +343,7 @@ if __name__ == '__main__':
                 skill, answer, stu = skill.to(device), answer.to(device), stu.to(device)
                 # diff = extract_floats_from_tensor(skill, './dataset/assist2009_pid/question_difficulty.json')
                 h_logit, d_logit, emseble_logit = net(stu, skill, answer)
-                loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer)
+                loss, y_pred, y_true = kt_loss(h_logit, d_logit, emseble_logit, answer,False)
 
                 y_true_test_list.append(y_true.cpu().detach().numpy())
                 y_pred_test_list.append(y_pred.cpu().detach().numpy())
@@ -363,12 +363,12 @@ if __name__ == '__main__':
 
     print('average test auc:', np.round(np.mean(auc_test_list), decimals=4), u'\u00B1',
           np.round(np.std(auc_test_list), decimals=4))
-    print('average test auc:', np.round(np.mean(auc_test_list), decimals=4), u'\u00B1',
-          np.round(np.std(auc_test_list), decimals=4), file=log)
+    # print('average test auc:', np.round(np.mean(auc_test_list), decimals=4), u'\u00B1',
+    #       np.round(np.std(auc_test_list), decimals=4), file=log)
     print('average test acc:', np.round(np.mean(acc_test_list), decimals=4), u'\u00B1',
           np.round(np.std(auc_test_list), decimals=4))
-    print('average test acc:', np.round(np.mean(acc_test_list), decimals=4), u'\u00B1',
-          np.round(np.std(auc_test_list), decimals=4), file=log)
+    # print('average test acc:', np.round(np.mean(acc_test_list), decimals=4), u'\u00B1',
+    #       np.round(np.std(auc_test_list), decimals=4), file=log)
 
     del auc_test_list
     log.close()

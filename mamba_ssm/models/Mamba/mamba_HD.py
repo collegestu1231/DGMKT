@@ -1,5 +1,5 @@
 # Copyright (c) 2023, Albert Gu, Tri Dao.
-from umap import UMAP
+
 
 
 
@@ -20,11 +20,11 @@ from mamba_ssm.modules.mha import MHA
 from mamba_ssm.modules.mlp import GatedMLP
 from mamba_ssm.modules.block import Block
 from mamba_ssm.utils.generation import GenerationMixin  # 提供常用的生成函数
-from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
+
 from hgnn_models import HGNN
-import matplotlib.pyplot as plt
+
 from sklearn.decomposition import PCA
-from Test_file import plot_radar_chart,find_unique_steps,plot_mastery_heatmap
+
 try:
     from mamba_ssm.ops.triton.layer_norm import RMSNorm, layer_norm_fn, rms_norm_fn
 except ImportError:
